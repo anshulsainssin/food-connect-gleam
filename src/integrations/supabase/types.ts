@@ -14,7 +14,102 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      donations: {
+        Row: {
+          contact_info: string | null
+          created_at: string
+          diet: string
+          donor_id: string
+          food_type: string
+          id: string
+          notes: string | null
+          pickup_address: string
+          pickup_deadline: string | null
+          pickup_latitude: number | null
+          pickup_longitude: number | null
+          prepared_at: string | null
+          quantity: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          contact_info?: string | null
+          created_at?: string
+          diet: string
+          donor_id: string
+          food_type: string
+          id?: string
+          notes?: string | null
+          pickup_address: string
+          pickup_deadline?: string | null
+          pickup_latitude?: number | null
+          pickup_longitude?: number | null
+          prepared_at?: string | null
+          quantity: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          contact_info?: string | null
+          created_at?: string
+          diet?: string
+          donor_id?: string
+          food_type?: string
+          id?: string
+          notes?: string | null
+          pickup_address?: string
+          pickup_deadline?: string | null
+          pickup_latitude?: number | null
+          pickup_longitude?: number | null
+          prepared_at?: string | null
+          quantity?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          latitude: number | null
+          location_label: string | null
+          longitude: number | null
+          organization: string | null
+          phone: string | null
+          role: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          latitude?: number | null
+          location_label?: string | null
+          longitude?: number | null
+          organization?: string | null
+          phone?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          latitude?: number | null
+          location_label?: string | null
+          longitude?: number | null
+          organization?: string | null
+          phone?: string | null
+          role?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
