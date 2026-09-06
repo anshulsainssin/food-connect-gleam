@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { Check, ChevronRight, ClipboardList, HandHeart, MapPin, PackageOpen, Plus, Truck, Users, UtensilsCrossed } from "lucide-react";
+import { Check, ChevronRight, ClipboardList, MapPin, PackageOpen, Plus, Truck, Users, UtensilsCrossed } from "lucide-react";
 
 import { AppShell, PageIntro, StatusBadge } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
@@ -81,6 +81,3 @@ function Index() {
 function Field({ label, type = "text", placeholder }: { label: string; type?: string; placeholder?: string }) {
   return <label className="block"><span className="label-caps text-muted-foreground">{label}</span><input required type={type} placeholder={placeholder} className="mt-2 h-12 w-full border-b border-input bg-transparent text-sm outline-none placeholder:text-muted-foreground/60 focus:border-foreground" /></label>;
 }
-
-// HandHeart kept for future use in this view
-void HandHeart;
