@@ -1,8 +1,10 @@
-import { Link, useRouterState } from "@tanstack/react-router";
-import { BarChart3, Bell, HandHeart, Home, Menu, Truck, UserRound, X } from "lucide-react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { BarChart3, Bell, HandHeart, Home, LogOut, Menu, Truck, UserRound, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useProfile } from "@/hooks/use-profile";
+import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
   { label: "Overview", to: "/", icon: Home },
@@ -15,6 +17,13 @@ const navItems = [
 export function AppShell({ children }: { children: ReactNode }) {
   const [mobileMenu, setMobileMenu] = useState(false);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const navigate = useNavigate();
+  const { user, profile } = useProfile();
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    void navigate({ to: "/auth", replace: true });
+  }
 
   const navigation = (mobile = false) => navItems.map(({ label, to, icon: Icon }) => (
     <Button key={to} asChild variant="nav" className={mobile ? "w-full justify-start" : "w-full justify-start"} data-active={pathname === to} onClick={() => mobile && setMobileMenu(false)}>
