@@ -31,7 +31,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" aria-label="Notifications" className="relative"><Bell className="size-4" /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-accent" /></Button>
-          <div className="hidden border-l border-border pl-4 sm:block"><p className="text-sm font-medium">Seva Community Trust</p><p className="text-xs text-muted-foreground">Receiver</p></div>
+          {user ? (
+            <div className="hidden items-center gap-3 border-l border-border pl-4 sm:flex">
+              <div><p className="text-sm font-medium">{profile?.full_name ?? user.email}</p><p className="text-xs text-muted-foreground">{profile?.role ?? profile?.organization ?? "Member"}</p></div>
+              <Button variant="ghost" size="icon" aria-label="Sign out" onClick={signOut}><LogOut className="size-4" /></Button>
+            </div>
+          ) : (
+            <Button asChild variant="outline" className="ml-1"><Link to="/auth">Sign in</Link></Button>
+          )}
         </div>
       </header>
 
