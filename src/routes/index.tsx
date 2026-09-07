@@ -1,9 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { Check, ChevronRight, ClipboardList, MapPin, PackageOpen, Plus, Truck, Users, UtensilsCrossed } from "lucide-react";
 
 import { AppShell, PageIntro, StatusBadge } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
+import { useLocationSync, useProfile } from "@/hooks/use-profile";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [
@@ -31,11 +33,54 @@ const donations = [
 ];
 
 function Index() {
+  const navigate = useNavigate();
+  const { user, profile, updateProfile } = useProfile();
   const [diet, setDiet] = useState("Vegetarian");
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  function submitDonation(event: FormEvent<HTMLFormElement>) {
+  const { status: locationStatus } = useLocationSync(
+    Boolean(user),
+    profile?.latitude != null && profile?.longitude != null,
+    (coords) => updateProfile({ latitude: coords.latitude, longitude: coords.longitude }),
+  );
+
+  const firstName = (profile?.full_name ?? user?.email?.split("@")[0] ?? "there").split(" ")[0];
+
+  async function submitDonation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setError(null);
+
+    if (!user) {
+      void navigate({ to: "/auth" });
+      return;
+    }
+
+    const form = new FormData(event.currentTarget);
+    const address = String(form.get("pickup_location") ?? "").trim();
+
+    setSaving(true);
+    const coords = await currentCoords();
+    const { error: insertError } = await supabase.from("donations").insert({
+      donor_id: user.id,
+      food_type: String(form.get("food_type") ?? ""),
+      diet,
+      quantity: String(form.get("quantity") ?? ""),
+      prepared_at: toTimestamp(form.get("prepared_at")),
+      pickup_deadline: toTimestamp(form.get("pickup_deadline")),
+      contact_info: String(form.get("contact") ?? ""),
+      notes: String(form.get("notes") ?? ""),
+      pickup_address: address,
+      pickup_latitude: coords?.latitude ?? profile?.latitude ?? null,
+      pickup_longitude: coords?.longitude ?? profile?.longitude ?? null,
+    });
+    setSaving(false);
+
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
     setSubmitted(true);
   }
 
@@ -43,7 +88,7 @@ function Index() {
     <AppShell>
       <PageIntro
         eyebrow="Overview / September 04"
-        title={<>Welcome back, <span className="italic">Maya.</span></>}
+        title={<>Welcome back, <span className="italic">{firstName}.</span></>}
         description="Your contributions have redistributed 214 meals this month. Three community partners are ready for new donations today."
         action={
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -63,14 +108,16 @@ function Index() {
 
         <section id="donate" className="bg-muted/25 px-5 py-9 sm:px-8 lg:px-10 lg:py-10">
           <p className="label-caps text-accent">Donation registry</p><h2 className="mt-3 font-display text-4xl italic">Share surplus food</h2><p className="mt-3 max-w-lg text-sm leading-6 text-muted-foreground">Add pickup details so a nearby community partner can collect the food safely and on time.</p>
-          {submitted ? <div className="mt-8 border border-border-strong bg-card p-6"><div className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="size-5" /></div><h3 className="mt-5 font-display text-3xl">Donation ready</h3><p className="mt-2 text-sm text-muted-foreground">Your sample donation has been added to this preview.</p><Button className="mt-6" variant="outline" onClick={() => setSubmitted(false)}>Add another</Button></div> : <form className="mt-8 space-y-6" onSubmit={submitDonation}>
-            <label className="block"><span className="label-caps text-muted-foreground">Food type</span><select required className="mt-2 h-12 w-full border-b border-input bg-transparent text-sm outline-none focus:border-foreground"><option value="">Select food type</option><option>Cooked meals</option><option>Fresh produce</option><option>Bakery items</option><option>Packaged food</option></select></label>
+          {submitted ? <div className="mt-8 border border-border-strong bg-card p-6"><div className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground"><Check className="size-5" /></div><h3 className="mt-5 font-display text-3xl">Donation ready</h3><p className="mt-2 text-sm text-muted-foreground">Your donation has been saved with its pickup location.</p><Button className="mt-6" variant="outline" onClick={() => setSubmitted(false)}>Add another</Button></div> : <form className="mt-8 space-y-6" onSubmit={submitDonation}>
+            <label className="block"><span className="label-caps text-muted-foreground">Food type</span><select name="food_type" required className="mt-2 h-12 w-full border-b border-input bg-transparent text-sm outline-none focus:border-foreground"><option value="">Select food type</option><option>Cooked meals</option><option>Fresh produce</option><option>Bakery items</option><option>Packaged food</option></select></label>
             <fieldset><legend className="label-caps text-muted-foreground">Dietary type</legend><div className="mt-2 grid grid-cols-2 gap-2">{["Vegetarian","Non-vegetarian"].map((option) => <Button key={option} type="button" variant={diet === option ? "primary" : "outline"} onClick={() => setDiet(option)}>{option}</Button>)}</div></fieldset>
-            <div className="grid gap-6 sm:grid-cols-2"><Field label="Quantity / people served" type="number" placeholder="40" /><Field label="Food prepared time" type="datetime-local" /></div>
-            <div className="grid gap-6 sm:grid-cols-2"><Field label="Pickup deadline" type="datetime-local" /><Field label="Contact information" type="tel" placeholder="+91 98765 43210" /></div>
-            <Field label="Pickup location" placeholder="12 Garden Avenue, Central Market" />
-            <label className="block"><span className="label-caps text-muted-foreground">Additional notes</span><textarea rows={3} placeholder="Packaging details, allergens, or pickup instructions" className="mt-2 w-full resize-none border-b border-input bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground/60 focus:border-foreground" /></label>
-            <Button type="submit" size="wide" className="w-full">Submit donation</Button>
+            <div className="grid gap-6 sm:grid-cols-2"><Field name="quantity" label="Quantity / people served" type="number" placeholder="40" /><Field name="prepared_at" label="Food prepared time" type="datetime-local" /></div>
+            <div className="grid gap-6 sm:grid-cols-2"><Field name="pickup_deadline" label="Pickup deadline" type="datetime-local" /><Field name="contact" label="Contact information" type="tel" placeholder="+91 98765 43210" /></div>
+            <Field name="pickup_location" label="Pickup location" placeholder="12 Garden Avenue, Central Market" />
+            <label className="block"><span className="label-caps text-muted-foreground">Additional notes</span><textarea name="notes" rows={3} placeholder="Packaging details, allergens, or pickup instructions" className="mt-2 w-full resize-none border-b border-input bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground/60 focus:border-foreground" /></label>
+            {locationStatus === "denied" && <p className="text-xs text-muted-foreground">Location access is off, so the pickup address will be saved without coordinates.</p>}
+            {error && <p className="text-sm text-accent">{error}</p>}
+            <Button type="submit" size="wide" className="w-full" disabled={saving}>Submit donation</Button>
           </form>}
         </section>
       </div>
@@ -78,6 +125,22 @@ function Index() {
   );
 }
 
-function Field({ label, type = "text", placeholder }: { label: string; type?: string; placeholder?: string }) {
-  return <label className="block"><span className="label-caps text-muted-foreground">{label}</span><input required type={type} placeholder={placeholder} className="mt-2 h-12 w-full border-b border-input bg-transparent text-sm outline-none placeholder:text-muted-foreground/60 focus:border-foreground" /></label>;
+function toTimestamp(value: FormDataEntryValue | null) {
+  const text = String(value ?? "").trim();
+  return text ? new Date(text).toISOString() : null;
+}
+
+function currentCoords(): Promise<{ latitude: number; longitude: number } | null> {
+  if (typeof navigator === "undefined" || !navigator.geolocation) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => resolve({ latitude: position.coords.latitude, longitude: position.coords.longitude }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 8000 },
+    );
+  });
+}
+
+function Field({ label, name, type = "text", placeholder }: { label: string; name: string; type?: string; placeholder?: string }) {
+  return <label className="block"><span className="label-caps text-muted-foreground">{label}</span><input required name={name} type={type} placeholder={placeholder} className="mt-2 h-12 w-full border-b border-input bg-transparent text-sm outline-none placeholder:text-muted-foreground/60 focus:border-foreground" /></label>;
 }

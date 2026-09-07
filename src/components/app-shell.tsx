@@ -1,8 +1,10 @@
-import { Link, useRouterState } from "@tanstack/react-router";
-import { BarChart3, Bell, HandHeart, Home, Menu, Truck, UserRound, X } from "lucide-react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { BarChart3, Bell, HandHeart, Home, LogOut, Menu, Truck, UserRound, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
+import { useProfile } from "@/hooks/use-profile";
+import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
   { label: "Overview", to: "/", icon: Home },
@@ -15,6 +17,13 @@ const navItems = [
 export function AppShell({ children }: { children: ReactNode }) {
   const [mobileMenu, setMobileMenu] = useState(false);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const navigate = useNavigate();
+  const { user, profile } = useProfile();
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    void navigate({ to: "/auth", replace: true });
+  }
 
   const navigation = (mobile = false) => navItems.map(({ label, to, icon: Icon }) => (
     <Button key={to} asChild variant="nav" className={mobile ? "w-full justify-start" : "w-full justify-start"} data-active={pathname === to} onClick={() => mobile && setMobileMenu(false)}>
@@ -31,7 +40,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" aria-label="Notifications" className="relative"><Bell className="size-4" /><span className="absolute right-2 top-2 size-1.5 rounded-full bg-accent" /></Button>
-          <div className="hidden border-l border-border pl-4 sm:block"><p className="text-sm font-medium">Seva Community Trust</p><p className="text-xs text-muted-foreground">Receiver</p></div>
+          {user ? (
+            <div className="hidden items-center gap-3 border-l border-border pl-4 sm:flex">
+              <div><p className="text-sm font-medium">{profile?.full_name ?? user.email}</p><p className="text-xs text-muted-foreground">{profile?.role ?? profile?.organization ?? "Member"}</p></div>
+              <Button variant="ghost" size="icon" aria-label="Sign out" onClick={signOut}><LogOut className="size-4" /></Button>
+            </div>
+          ) : (
+            <Button asChild variant="outline" className="ml-1"><Link to="/auth">Sign in</Link></Button>
+          )}
         </div>
       </header>
 
