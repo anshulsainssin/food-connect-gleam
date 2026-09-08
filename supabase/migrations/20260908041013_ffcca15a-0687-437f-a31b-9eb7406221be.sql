@@ -1,0 +1,1 @@
+DELETE FROM public.donations WHERE notes = 'Test donation for location verification';
