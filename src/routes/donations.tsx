@@ -20,6 +20,13 @@ export const Route = createFileRoute("/donations")({
 });
 
 const filters = ["All", "Nearby", "Vegetarian", "Non-vegetarian", "Urgent"] as const;
+const distanceOptions = [
+  { label: "Any distance", value: 0 },
+  { label: "Within 2 km", value: 2 },
+  { label: "Within 5 km", value: 5 },
+  { label: "Within 10 km", value: 10 },
+  { label: "Within 25 km", value: 25 },
+];
 
 type Donation = Tables<"donations">;
 
@@ -36,11 +43,28 @@ function isUrgent(iso: string | null) {
   return deadline > now && deadline - now <= 4 * 60 * 60 * 1000;
 }
 
+function distanceKm(a: { lat: number; lon: number }, b: { lat: number; lon: number }) {
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lon - a.lon);
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
 function DonationsPage() {
   const [filter, setFilter] = useState<(typeof filters)[number]>("All");
+  const [maxDistance, setMaxDistance] = useState(0);
   const [claimed, setClaimed] = useState<string[]>([]);
   const [donations, setDonations] = useState<Donation[]>([]);
   const [loading, setLoading] = useState(true);
+  const { profile } = useProfile();
+
+  const origin =
+    profile?.latitude != null && profile?.longitude != null
+      ? { lat: profile.latitude, lon: profile.longitude }
+      : null;
 
   useEffect(() => {
     async function load() {
@@ -55,19 +79,35 @@ function DonationsPage() {
     void load();
   }, []);
 
+  const withDistance = useMemo(
+    () =>
+      donations.map((item) => ({
+        item,
+        distance:
+          origin && item.pickup_latitude != null && item.pickup_longitude != null
+            ? distanceKm(origin, { lat: item.pickup_latitude, lon: item.pickup_longitude })
+            : null,
+      })),
+    [donations, origin?.lat, origin?.lon],
+  );
+
   const visible = useMemo(
     () =>
-      donations.filter((item) =>
-        filter === "All"
-          ? true
-          : filter === "Nearby"
+      withDistance
+        .filter(({ item }) =>
+          filter === "All" || filter === "Nearby"
             ? true
             : filter === "Urgent"
               ? isUrgent(item.pickup_deadline)
               : item.diet === filter,
-      ),
-    [donations, filter],
+        )
+        .filter(({ distance }) => (maxDistance === 0 ? true : distance != null && distance <= maxDistance))
+        .sort((a, b) =>
+          filter === "Nearby" ? (a.distance ?? Infinity) - (b.distance ?? Infinity) : 0,
+        ),
+    [withDistance, filter, maxDistance],
   );
+
 
   return (
     <AppShell>
