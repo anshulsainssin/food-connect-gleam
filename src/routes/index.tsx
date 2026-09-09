@@ -28,11 +28,12 @@ const stats = [
   { label: "Completed pickups", value: "128", unit: "all time", icon: Check },
 ];
 
-const donations = [
-  { name: "Vegetable biryani & dal", detail: "Serves 40 · Uptown District", time: "Pickup by 1:30 PM", status: "Available" },
-  { name: "Chicken pulao", detail: "Serves 25 · Riverside", time: "Pickup by 12:00 PM", status: "Claimed" },
-  { name: "Mixed salad bowls", detail: "Serves 15 · Midtown", time: "Picked up yesterday", status: "Picked Up" },
-];
+type Donation = Tables<"donations">;
+
+function formatWhen(iso: string | null) {
+  if (!iso) return "No pickup deadline";
+  return `Pickup by ${new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`;
+}
 
 function Index() {
   const navigate = useNavigate();
@@ -41,6 +42,7 @@ function Index() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [myDonations, setMyDonations] = useState<Donation[]>([]);
 
   const { status: locationStatus } = useLocationSync(
     Boolean(user),
@@ -49,6 +51,21 @@ function Index() {
   );
 
   const firstName = (profile?.full_name ?? user?.email?.split("@")[0] ?? "there").split(" ")[0];
+
+  const loadMine = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from("donations")
+      .select("*")
+      .eq("donor_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(10);
+    setMyDonations((data as Donation[] | null) ?? []);
+  }, []);
+
+  useEffect(() => {
+    if (user?.id) void loadMine(user.id);
+    else setMyDonations([]);
+  }, [user?.id, loadMine]);
 
   async function submitDonation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,7 +76,8 @@ function Index() {
       return;
     }
 
-    const form = new FormData(event.currentTarget);
+    const formEl = event.currentTarget;
+    const form = new FormData(formEl);
     const address = String(form.get("pickup_location") ?? "").trim();
 
     setSaving(true);
@@ -83,8 +101,12 @@ function Index() {
       setError(insertError.message);
       return;
     }
+    formEl.reset();
+    setDiet("Vegetarian");
     setSubmitted(true);
+    await loadMine(user.id);
   }
+
 
   return (
     <AppShell>
