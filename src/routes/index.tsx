@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Check, ChevronRight, ClipboardList, MapPin, PackageOpen, Plus, Truck, Users, UtensilsCrossed } from "lucide-react";
 
 import { AppShell, PageIntro, StatusBadge } from "@/components/app-shell";
 import { Button } from "@/components/ui/button";
 import { useLocationSync, useProfile } from "@/hooks/use-profile";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [
