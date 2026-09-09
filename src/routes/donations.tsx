@@ -127,6 +127,18 @@ function DonationsPage() {
             {option}
           </Button>
         ))}
+        <select
+          aria-label="Distance"
+          value={maxDistance}
+          onChange={(event) => setMaxDistance(Number(event.target.value))}
+          className="h-10 border border-input bg-transparent px-3 text-sm outline-none focus:border-foreground"
+        >
+          {distanceOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
         <span className="ml-auto self-center text-xs text-muted-foreground">{visible.length} donations</span>
       </section>
 
@@ -134,7 +146,7 @@ function DonationsPage() {
         {loading ? (
           <p className="bg-background p-10 text-sm text-muted-foreground sm:col-span-2 xl:col-span-3">Loading donations…</p>
         ) : (
-          visible.map((item) => {
+          visible.map(({ item, distance }) => {
             const isClaimed = claimed.includes(item.id);
             const urgent = isUrgent(item.pickup_deadline);
             return (
@@ -161,7 +173,7 @@ function DonationsPage() {
                   </p>
                   <p className="flex items-center gap-2">
                     <Navigation className="size-4 text-accent" />
-                    Distance not calculated
+                    {distance == null ? "Distance not available" : `${distance.toFixed(1)} km away`}
                   </p>
                   <p className="flex items-center gap-2">
                     <MapPin className="size-4 text-accent" />
@@ -180,6 +192,7 @@ function DonationsPage() {
             );
           })
         )}
+
         {!loading && visible.length === 0 && (
           <p className="bg-background p-10 text-sm text-muted-foreground sm:col-span-2 xl:col-span-3">
             No donations match this filter right now.
